@@ -18,7 +18,7 @@ esac
 
 echo "Detected CPU: $CPU_ARCH"
 
-# 3) Пытаемся найти оптимальный пакет (например cortex-a53)
+# 3) Пытаемся найти оптимальный пакет
 URL=$(wget -qO- "$API" | \
 grep browser_download_url | \
 grep "openwrt" | \
@@ -49,5 +49,9 @@ wget -O /tmp/magitrickle.ipk "$URL"
 
 echo "Installing..."
 opkg install /tmp/magitrickle.ipk
+echo "Cleaning up..."
+rm -f /tmp/magitrickle.ipk
+
+
 
 
