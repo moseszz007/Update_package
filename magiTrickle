@@ -1,16 +1,23 @@
 #!/bin/sh
 
 REPO="badigit/MagiTrickle_mod_badigit"
+API="https://api.github.com/repos/$REPO/releases/latest"
 
-ARCH=$(opkg print-architecture | awk '/priority 10/{print $1}')
+# Определяем архитектуру OpenWrt
+ARCH=$(opkg print-architecture | awk '$2 == "priority" && $3 == "10" {print $1}')
+
 echo "Detected architecture: $ARCH"
 
-LATEST=$(wget -qO- https://api.github.com/repos/$REPO/releases/latest)
-
-URL=$(echo "$LATEST" | grep browser_download_url | grep "$ARCH" | grep ".ipk" | cut -d '"' -f 4)
+# Получаем один подходящий .ipk
+URL=$(wget -qO- "$API" | \
+grep browser_download_url | \
+grep "$ARCH" | \
+grep "openwrt" | \
+grep ".ipk" | \
+head -n1 | cut -d '"' -f 4)
 
 if [ -z "$URL" ]; then
-    echo "No suitable .ipk found for architecture: $ARCH"
+    echo "No matching package found for architecture: $ARCH"
     exit 1
 fi
 
