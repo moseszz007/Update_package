@@ -1,0 +1,21 @@
+#!/bin/sh
+
+REPO="badigit/MagiTrickle_mod_badigit"
+
+ARCH=$(opkg print-architecture | awk '/priority 10/{print $1}')
+echo "Detected architecture: $ARCH"
+
+LATEST=$(wget -qO- https://api.github.com/repos/$REPO/releases/latest)
+
+URL=$(echo "$LATEST" | grep browser_download_url | grep "$ARCH" | grep ".ipk" | cut -d '"' -f 4)
+
+if [ -z "$URL" ]; then
+    echo "No suitable .ipk found for architecture: $ARCH"
+    exit 1
+fi
+
+echo "Downloading: $URL"
+wget -O /tmp/magitrickle.ipk "$URL"
+
+echo "Installing..."
+opkg install /tmp/magitrickle.ipk
