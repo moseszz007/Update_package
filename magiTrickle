@@ -3,20 +3,44 @@
 REPO="badigit/MagiTrickle_mod_badigit"
 API="https://api.github.com/repos/$REPO/releases/latest"
 
-# Определяем архитектуру OpenWrt
-ARCH=$(opkg print-architecture | awk '$2 == "priority" && $3 == "10" {print $1}')
-echo "Detected architecture: $ARCH"
+# 1) Определяем архитектуру OpenWrt
+OWRT_ARCH=$(opkg print-architecture | awk '$2=="priority" && $3=="10" {print $1}')
+echo "OpenWrt architecture: $OWRT_ARCH"
 
-# Ищем только openwrt-пакеты, только .ipk, только под нужную архитектуру
+# 2) Определяем CPU (cortex-a53/a72/a76)
+CPU=$(grep -m1 'CPU part' /proc/cpuinfo | awk '{print $4}')
+case "$CPU" in
+    0xd03) CPU_ARCH="cortex-a53" ;;
+    0xd08) CPU_ARCH="cortex-a72" ;;
+    0xd0b) CPU_ARCH="cortex-a76" ;;
+    *) CPU_ARCH="generic" ;;
+esac
+
+echo "Detected CPU: $CPU_ARCH"
+
+# 3) Пытаемся найти оптимальный пакет (например cortex-a53)
 URL=$(wget -qO- "$API" | \
 grep browser_download_url | \
 grep "openwrt" | \
-grep "$ARCH" | \
+grep "$OWRT_ARCH" | \
+grep "$CPU_ARCH" | \
 grep ".ipk" | \
 head -n1 | cut -d '"' -f 4)
 
+# 4) Если оптимального нет — берём generic
 if [ -z "$URL" ]; then
-    echo "No matching package found for architecture: $ARCH"
+    echo "Optimized package not found, using generic..."
+    URL=$(wget -qO- "$API" | \
+    grep browser_download_url | \
+    grep "openwrt" | \
+    grep "$OWRT_ARCH" | \
+    grep "generic" | \
+    grep ".ipk" | \
+    head -n1 | cut -d '"' -f 4)
+fi
+
+if [ -z "$URL" ]; then
+    echo "No suitable package found at all."
     exit 1
 fi
 
@@ -25,4 +49,5 @@ wget -O /tmp/magitrickle.ipk "$URL"
 
 echo "Installing..."
 opkg install /tmp/magitrickle.ipk
+
 
